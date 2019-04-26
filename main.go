@@ -103,16 +103,16 @@ func (l *TimeRotatingFileHandler) Close() (error) {
 
 type ConfigStruct struct {
 	logPath    string
-	serverIp   string
-	serverPort string
+	address   string
+	workerNum	int
 	handledNum uint64
 	startTime  time.Time
 }
 
 func (s *ConfigStruct) Setup() {
-	flag.StringVar(&s.logPath, "log-path", "/var/log/kong-log", "log path")
-	flag.StringVar(&s.serverIp, "server-ip", "127.0.0.1", "listen ip")
-	flag.StringVar(&s.serverPort, "server-port", "9513", "listen port")
+	flag.StringVar(&s.logPath, "log_path", "/var/log/kong-log", "log path")
+	flag.StringVar(&s.address, "address", "127.0.0.1:9513", "listen ip")
+	flag.IntVar(&s.workerNum, "worker_num", 2, "worker_num")
 }
 
 
@@ -131,11 +131,10 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
-	workerNum := 2
-	channel := make(chan []byte, workerNum)
+	channel := make(chan []byte, c.workerNum)
 	defer close(channel)
 
-	for i := 0; i < workerNum; i++ {
+	for i := 0; i < c.workerNum; i++ {
 		go handleLog(channel, handler, c)
 	}
 
@@ -156,8 +155,7 @@ func main() {
 	r.GET("/kong-log-stat", func(content *gin.Context) {
 		content.JSON(http.StatusOK, gin.H{
 			"log-path": c.logPath,
-			"server-ip": c.serverIp,
-			"server-port": c.serverPort,
+			"address": c.address,
 			"start-time": c.startTime,
 			"duration": time.Now().Sub(c.startTime).String(),
 			"handled": c.handledNum,
@@ -167,7 +165,7 @@ func main() {
 
 
 	c.startTime = time.Now()
-	if err := r.Run(c.serverIp+":"+c.serverPort); err != nil {
+	if err := r.Run(c.address); err != nil {
 		panic(err)
 	}
 }
