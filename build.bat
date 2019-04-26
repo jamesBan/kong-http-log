@@ -1,0 +1,1 @@
+gox.exe -os "windows linux darwin" -arch amd64 -tags=jsoniter
